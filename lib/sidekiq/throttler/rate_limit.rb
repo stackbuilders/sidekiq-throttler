@@ -7,7 +7,7 @@ module Sidekiq
     # executions so that "24 jobs every 1 hour" becomes "1 job every 2 minutes
     # and 30 seconds"
     class RateLimit
-
+      LOCK = Mutex.new
       ##
       # @return [Sidekiq::Worker]
       #   The worker to rate limit.
@@ -174,7 +174,7 @@ module Sidekiq
       # @return [Integer]
       #   The current number of jobs executed.
       def self.count(limiter)
-        Thread.exclusive do
+        LOCK.synchronize do
           prune(limiter)
           limiter.executions.count(limiter.key)
         end
@@ -188,7 +188,7 @@ module Sidekiq
       # @return [Integer]
       #   The current number of jobs executed.
       def self.increment(limiter)
-        Thread.exclusive do
+        LOCK.synchronize do
           limiter.executions.append(limiter.key, Time.now)
         end
         count(limiter)
